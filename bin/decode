@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+
+from msc.packets import decode_packets, Packet
+from msc.datagroups import decode_datagroups, Datagroup
+from mot import decode_objects, MotObject
+import os, sys
+import logging
+
+import argparse
+
+parser = argparse.ArgumentParser(description='Decode a datagroup or packet bitstream into MOT objects')
+parser.add_argument('filename',  nargs='?', help='Read bitstream from named file', default=None)
+parser.add_argument('-o', dest='objects', action='store_true', help='decode objects')
+parser.add_argument('-d', dest='datagroups', action='store_true', help='decode datagroups')
+parser.add_argument('-p', dest='packets', action='store_true', help='decode packets')
+parser.add_argument('-c', dest='crc', action='store_true', help='check CRCs')
+parser.add_argument('-m', dest='modules', action='append', help='additional module to load')
+parser.add_argument('-X', dest='debug', action='store_true', help='turn debug on')
+parser.add_argument('-f', dest='output', help='outfile file directory')
+
+args = parser.parse_args()
+if args.filename: 
+    print 'decoding from', args.filename 
+    f = open(args.filename, 'rb')   
+else:
+    f = sys.stdin
+
+if args.debug:
+    logging.basicConfig(level=logging.DEBUG)
+else:
+    logging.basicConfig(level=logging.ERROR)
+logger = logging.getLogger("decode")
+
+# load additional modules
+if args.modules:
+    logger.debug('loading %d additional modules', len(args.modules)) 
+    for module in args.modules:
+        try:
+            logger.debug('loading additional module: %s', module)
+            mod = __import__(module)
+            logger.debug('loaded additional module from: %s', mod)
+        except:
+            logger.exception('error loading additional module: %s', module)
+
+# create sequence of parsing generators, typically packet->datagroup->object
+func = f
+if args.packets:
+    f = decode_packets(f, check_crc=args.crc)
+if args.datagroups:
+    f = decode_datagroups(f, check_crc=args.crc)
+if args.objects:
+    f = decode_objects(f)
+logger.debug("decoding function: %s", f);
+
+for o in f:
+    if isinstance(o, Packet):
+        print 'packet:', o
+    elif isinstance(o, Datagroup):
+        print 'dataroup:', o
+    elif isinstance(o, MotObject):
+        print "=" * 48
+        print '{name} {type} ({size} bytes)'.format(name=o.get_name(), type=o.get_type(), size=len(o.get_body()))
+        print "=" * 48
+        print 'parameters:'
+        for p in o.get_parameters():
+            print '\t', repr(p)
+        print 
+        if args.output:
+            import base64
+            file_output = open(os.path.join(args.output, base64.urlsafe_b64encode(o.get_name())), 'wb')
+            file_output.write(o.get_body())
+            file_output.close()
+            
+        
