@@ -373,7 +373,9 @@ class Datagroup:
     @staticmethod
     def frombits(bits, i=0, check_crc=True):
         """Parse a datagroup from a bitarray, with an optional offset"""
-       
+
+        # use only the slice indicated by the offset
+        bits = bits[i:]
         # check we have enough header first
         if (bits.length() - i) < ((9 + 2) * 8): raise IncompleteDatagroupError
        
