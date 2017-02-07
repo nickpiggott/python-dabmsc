@@ -1,4 +1,4 @@
-from msc import bitarray_to_hex, int_to_bitarray, calculate_crc, InvalidCrcError, generate_transport_id
+from msc import bitarray_to_hex, int_to_bitarray, crc16_11021, InvalidCrcError, generate_transport_id
 from mot import DirectoryEncoder, SortedHeaderInformation
 from bitarray import bitarray
 import logging
@@ -365,7 +365,7 @@ class Datagroup:
         
         # CRC
         crc = 0;
-        if self.crc_enabled: crc = calculate_crc(bits.tobytes())
+        if self.crc_enabled: crc = crc16_11021(bits.tobytes())
         bits += int_to_bitarray(crc, 16)
 
         return bits.tobytes()
@@ -395,9 +395,10 @@ class Datagroup:
         if bits.length() < 72 + size * 8 + 16: raise IncompleteDatagroupError
         data = bits[72 : 72 + (size*8)]
         if check_crc:
-            crc = int(bits[72 + data.length() : 72 + data.length() + 16].to01(), 2)
-            calculated = calculate_crc(bits[:72+data.length()].tobytes())
-            if crc != calculated: raise InvalidCrcError(crc, bits[:72+data.length() + 16].tobytes())  
+            crc_slice = bits[:bits.length()-16]
+            crc = int(bits[bits.length()-16:].to01(), 2)
+            calculated = crc16_11021(crc_slice.tobytes())
+            if crc != calculated: raise InvalidCrcError(crc, crc_slice.tobytes())
         
         datagroup = Datagroup(transport_id, type, data.tobytes(), segment_index, continuity, True, repetition, last)
         logger.debug('parsed datagroup: %s', datagroup)
