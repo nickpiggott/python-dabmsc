@@ -4,8 +4,6 @@ import logging
 
 logger = logging.getLogger('msc')
 
-# See Annex E in EN 300 401
-crc16_11021 = crcmod.mkCrcFun(0x11021, 0x0, False, 0xFFFF)
 crcfun = crcmod.predefined.mkPredefinedCrcFun('x25')
 def calculate_crc(data):
     return crcfun(data)
