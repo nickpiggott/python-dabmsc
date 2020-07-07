@@ -4,7 +4,7 @@ import logging
 
 logger = logging.getLogger('msc')
 
-crcfun = crcmod.predefined.mkPredefinedCrcFun('x25')
+crcfun = crcmod.mkCrcFun(0x11021, 0x0, False, 0xFFFF)
 def calculate_crc(data):
     return crcfun(data)
 

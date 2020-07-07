@@ -397,8 +397,8 @@ class Datagroup:
         if check_crc:
             crc = int(bits[72 + data.length() : 72 + data.length() + 16].to01(), 2)
             calculated = calculate_crc(bits[:72+data.length()].tobytes())
-            if crc != calculated: raise InvalidCrcError(crc, bits[:72+data.length() + 16].tobytes())
-            
+            if crc != calculated: raise InvalidCrcError(crc, bits[:72+data.length() + 16].tobytes())  
+        
         datagroup = Datagroup(transport_id, type, data.tobytes(), segment_index, continuity, True, repetition, last)
         logger.debug('parsed datagroup: %s', datagroup)
         
