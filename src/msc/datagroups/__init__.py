@@ -395,17 +395,10 @@ class Datagroup:
         if bits.length() < 72 + size * 8 + 16: raise IncompleteDatagroupError
         data = bits[72 : 72 + (size*8)]
         if check_crc:
-<<<<<<< HEAD
             crc = int(bits[72 + data.length() : 72 + data.length() + 16].to01(), 2)
             calculated = calculate_crc(bits[:72+data.length()].tobytes())
-            if crc != calculated: raise InvalidCrcError(crc, bits[:72+data.length() + 16].tobytes())  
-=======
-            crc_slice = bits[:bits.length()-16]
-            crc = int(bits[bits.length()-16:].to01(), 2)
-            calculated = crc16_11021(crc_slice.tobytes())
-            if crc != calculated: raise InvalidCrcError(crc, crc_slice.tobytes())
->>>>>>> parent of 8fc21cb... Add support for variable datagroup header size
-        
+            if crc != calculated: raise InvalidCrcError(crc, bits[:72+data.length() + 16].tobytes())
+            
         datagroup = Datagroup(transport_id, type, data.tobytes(), segment_index, continuity, True, repetition, last)
         logger.debug('parsed datagroup: %s', datagroup)
         
