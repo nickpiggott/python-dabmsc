@@ -132,7 +132,7 @@ def decode_packets(data, error_callback=None, check_crc=True, resync=True):
                     packet = Packet.frombits(data, i=i, check_crc=check_crc)
                     yield packet
                     i += (size * 8)
-                except InvalidCrcError, ice:
+                except (InvalidCrcError, ice):
                     if error_callback: error_callback(ice) 
                     if resync: i += 8
                     else: i += (size * 8)
@@ -154,7 +154,7 @@ def decode_packets(data, error_callback=None, check_crc=True, resync=True):
                     i += (size * 8)
                 except IncompletePacketError: 
                     break
-                except InvalidCrcError, ice:
+                except (InvalidCrcError, ice):
                     if error_callback: error_callback(ice) 
                     if resync: i += 8
                     else: i += (size * 8)
@@ -180,7 +180,7 @@ def decode_packets(data, error_callback=None, check_crc=True, resync=True):
                     yield packet
                     i += (size * 8)
                 except IncompletePacketError: break
-                except InvalidCrcError, ice:
+                except (InvalidCrcError, ice):
                     if error_callback: error_callback(ice) 
                     if resync: i += 8
                     else: i += (size * 8)

@@ -268,7 +268,7 @@ def decode_datagroups(data, error_callback=None, check_crc=True, resync=True):
                     buf = buf[i:]
                 except IncompleteDatagroupError: 
                     break
-                except InvalidCrcError, ice:
+                except (InvalidCrcError, ice):
                     if error_callback: error_callback(ice) 
                     buf = buf[8:] # attempt to resync?
                     #i += 8
@@ -292,9 +292,9 @@ def decode_datagroups(data, error_callback=None, check_crc=True, resync=True):
                     datagroup = Datagroup.frombits(buf, i=i, check_crc=check_crc)
                     logger.debug('yielding datagroup: %s', datagroup)
                     yield datagroup                    
-                except IncompleteDatagroupError, ide: 
+                except (IncompleteDatagroupError, ide): 
                     if error_callback: error_callback(ide) 
-                except InvalidCrcError, ice:
+                except (InvalidCrcError, ice):
                     if error_callback: error_callback(ice) 
                 del buf
                 buf = bitarray()
