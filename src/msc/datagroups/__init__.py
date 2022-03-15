@@ -195,14 +195,12 @@ def encode_directorymode(objects, directory_parameters=None, segmenting_strategy
     
     # add directory entries
     bits += entries 
-    print(len(bits.tobytes()))
     
     # segment and add directory datagroups with a new transport ID
     directory_transport_id = generate_transport_id()
     segments = _segment(bits.tobytes(), segmenting_strategy)
     for i, segment in enumerate(segments):
         header_group = Datagroup(directory_transport_id, DIRECTORY_UNCOMPRESSED, segment, i, i%16, last=True if i == len(segments) - 1 else False)
-        print("header group length ",len(header_group.tobytes()))
         tmp = bitarray()
         tmp.frombytes(header_group.tobytes())
         tmp.frombytes(header_group.tobytes())
