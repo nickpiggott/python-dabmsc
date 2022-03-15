@@ -15,7 +15,7 @@ def hex_to_bitarray(hex):
     return b
 
 def int_to_bitarray(i, n):
-    return bitarray(('{0:0%db}' % n).format(int(i)))
+    return bitarray(('{0:0%db}' % n).format(i))
 
 def bitarray_to_int(bits):
     return int(bits.to01(), 2)
@@ -61,7 +61,7 @@ class MemoryCachedTransportIdGenerator(TransportIdGenerator):
 
     def next(self, name=None):
         # first check the cache
-        if name is not None and name in self.cache:
+        if name is not None and self.cache.has_key(name):
             return self.cache.get(name)
 
         # if we've run out then start recycling from the head

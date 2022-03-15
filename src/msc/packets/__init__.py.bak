@@ -94,7 +94,7 @@ def encode_packets(datagroups, address=None, size=None, continuity=None):
     
     def get_continuity_index(address):
         index=0
-        if address in continuity:
+        if continuity.has_key(address):
             index = continuity[address]
             index += 1
             if index > 3: index = 0
