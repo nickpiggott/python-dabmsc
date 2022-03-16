@@ -54,7 +54,7 @@ class Packet:
         """Parse a packet from a bitarray, with an optional offset"""
         
         size = (int(bits[i+0:i+2].to01(), 2) + 1) * 24
-        if (bits.length() - i) < (size * 8): raise IncompletePacketError('length of bitarray is less than passed data length %d bytes < %d bytes', bits.length() / 8, size)
+        if (len(bits) - i) < (size * 8): raise IncompletePacketError('length of bitarray is less than passed data length %d bytes < %d bytes', len(bits) / 8, size)
         index = int(bits[i+2:i+4].to01(), 2)
         first = bits[i+4]
         last = bits[i+5]
@@ -123,11 +123,11 @@ def decode_packets(data, error_callback=None, check_crc=True, resync=True):
     if isinstance(data, bitarray):
         logger.debug('decoding packets from bitarray')
         i = 0
-        while i < data.length():
-            while i < data.length():
-                if data.length() < 2: break
+        while i < len(data):
+            while i < len(data):
+                if len(data) < 2: break
                 size = (int(data[i:i+2].to01(), 2) + 1) * 24
-                if data.length() < (size * 8): break
+                if len(data) < (size * 8): break
                 try:
                     packet = Packet.frombits(data, i=i, check_crc=check_crc)
                     yield packet
@@ -142,12 +142,12 @@ def decode_packets(data, error_callback=None, check_crc=True, resync=True):
         r = data.read(1024)
         while len(r):
             buf.frombytes(r)
-            logger.debug('chunking buffer of length %d bytes', buf.length()/8)
+            logger.debug('chunking buffer of length %d bytes', len(buf)/8)
             i = 0
-            while i < buf.length():
-                if buf.length() < 2: break
+            while i < len(buf):
+                if len(buf) < 2: break
                 size = (int(buf[i:i+2].to01(), 2) + 1) * 24
-                if buf.length() < (size * 8): break
+                if len(buf) < (size * 8): break
                 try:
                     packet = Packet.frombits(buf, i=i, check_crc=check_crc)
                     yield packet
@@ -169,12 +169,12 @@ def decode_packets(data, error_callback=None, check_crc=True, resync=True):
         b.frombytes(r)
         while len(r):
             buf.frombytes(r)
-            logger.debug('chunking buffer of length %d bytes', buf.length()/8)
+            logger.debug('chunking buffer of length %d bytes', len(buf)/8)
             i = 0
-            while i < buf.length():
-                if buf.length() < 2: break
+            while i < len(buf):
+                if len(buf) < 2: break
                 size = (int(buf[i:i+2].to01(), 2) + 1) * 24
-                if buf.length() < (size * 8): break
+                if len(buf) < (size * 8): break
                 try:
                     packet = Packet.frombits(buf, i=i, check_crc=check_crc)
                     yield packet
