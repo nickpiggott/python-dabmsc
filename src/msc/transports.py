@@ -169,10 +169,10 @@ class FileTransport(NonBlockingTransportMixin):
                 for d in data: 
                     b = d.tobytes()
                     if isinstance(d, Datagroup):
-                        self.f.write(b)
+                        self.f.write(b.decode('ascii'))
                         self.elapsed += datetime.timedelta(milliseconds=(8 * float(len(b)) * 1000)/self.bitrate)
                     elif isinstance(d, Packet):
-                        self.f.write(b)
+                        self.f.write(b.decode('ascii'))
                         self.elapsed += datetime.timedelta(milliseconds=24)
                     else: raise TypeError('yarrgh. neither a datagroup nor packet this be: %s', type(d))
                 self.f.flush()
