@@ -10,7 +10,7 @@ class Test(unittest.TestCase):
         """testing header mode with blank image"""
         
         # create MOT object
-        print 'creating MOT object'
+        print('creating MOT object')
         object = MotObject("TestObject", "\x00" * 1024, ContentType.IMAGE_JFIF)
         
         # encode object

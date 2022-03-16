@@ -20,7 +20,7 @@ class NonBlockingTransportMixin:
 class BlockingTransportMixin:
     """Defines a transport where the clock is set from the system clock elapsing"""
 
-    def clock(self): return elapsed_from_clock().next
+    def clock(self): return elapsed_from_clock().__next__
 
 class UdpTransport(NonBlockingTransportMixin):
     """Send data over a UDP socket either as Datagroups or DAB Packets"""
@@ -46,8 +46,8 @@ class UdpTransport(NonBlockingTransportMixin):
 
         * bitrate: transport bitrate in bps (default 16kbps)
         """
-        from urlparse import urlparse, parse_qsl
-        if isinstance(url, basestring): url = urlparse(url)
+        from urllib.parse import urlparse, parse_qsl
+        if isinstance(url, str): url = urlparse(url)
         if url.scheme != 'udp': raise ValueError('url must begin with the udp scheme')
         if url.path.find('?') >=0 : kwargs = dict(parse_qsl(url.path[url.path.index('?')+1:]))
         else: kwargs = dict(parse_qsl(url.query))
@@ -106,11 +106,11 @@ class UdpTransport(NonBlockingTransportMixin):
                 self.transport = transport
             def __iter__(self):
                 return self
-            def next(self):
+            def __next__(self):
                 r = self.transport.elapsed
                 self.transport.elapsed = datetime.timedelta(0)
                 return r
-        return Iter(self).next
+        return Iter(self).__next__
 
     def __str__(self):
         return 'udp://{address}'.format(address=self.address)
@@ -135,8 +135,8 @@ class FileTransport(NonBlockingTransportMixin):
 
         * bitrate: transport bitrate in bps (default 8kbps)
         """
-        from urlparse import urlparse, parse_qsl
-        if isinstance(url, basestring): url = urlparse(url)
+        from urllib.parse import urlparse, parse_qsl
+        if isinstance(url, str): url = urlparse(url)
         if url.scheme != 'file': raise ValueError('url must begin with the file scheme')
         path = url.path[:url.path.index('?')] if url.path.find('?') >= 0 else url.path
         path = path.strip()
@@ -169,10 +169,10 @@ class FileTransport(NonBlockingTransportMixin):
                 for d in data: 
                     b = d.tobytes()
                     if isinstance(d, Datagroup):
-                        self.f.write(b)
+                        self.f.write(b.decode('ascii'))
                         self.elapsed += datetime.timedelta(milliseconds=(8 * float(len(b)) * 1000)/self.bitrate)
                     elif isinstance(d, Packet):
-                        self.f.write(b)
+                        self.f.write(b.decode('ascii'))
                         self.elapsed += datetime.timedelta(milliseconds=24)
                     else: raise TypeError('yarrgh. neither a datagroup nor packet this be: %s', type(d))
                 self.f.flush()
@@ -184,12 +184,12 @@ class FileTransport(NonBlockingTransportMixin):
                 self.transport = transport
             def __iter__(self):
                 return self
-            def next(self):
+            def __next__(self):
                 r = self.transport.elapsed
                 self.transport.elapsed = datetime.timedelta(0)
                 return r
 
-        return Iter(self).next
+        return Iter(self).__next__
 
     def __str__(self):
         return 'file://{path}'.format(path=self.path)

@@ -127,7 +127,7 @@ def encode_headermode(objects, segmenting_strategy=None):
         # insert the core parameters into the header    
         bits = bitarray()
         bits += int_to_bitarray(len(body_data) if body_data else 0, 28) # (0-27): BodySize in bytes
-        bits += int_to_bitarray(extension_bits.length() / 8 + 7, 13) # (28-40): HeaderSize in bytes (core=7 + extension)
+        bits += int_to_bitarray(len(extension_bits) / 8 + 7, 13) # (28-40): HeaderSize in bytes (core=7 + extension)
         bits += int_to_bitarray(object.get_type().type, 6)  # (41-46): ContentType 
         bits += int_to_bitarray(object.get_type().subtype, 9) # (47-55): ContentSubType
         bits += extension_bits # (56-n): Header extension data
@@ -168,7 +168,7 @@ def encode_directorymode(objects, directory_parameters=None, segmenting_strategy
         
         # add the core parameters into the header    
         entries += int_to_bitarray(len(object.get_body()), 28) # (0-27): BodySize in bytes
-        entries += int_to_bitarray(extension_bits.length() / 8 + 7, 13) # (28-40): HeaderSize in bytes (core=7 + extension)
+        entries += int_to_bitarray(len(extension_bits) / 8 + 7, 13) # (28-40): HeaderSize in bytes (core=7 + extension)
         entries += int_to_bitarray(object.get_type().type, 6)  # (41-46): ContentType 
         entries += int_to_bitarray(object.get_type().subtype, 9) # (47-55): ContentSubType
         entries += extension_bits # (56-n): Header extension data
@@ -233,7 +233,7 @@ def decode_datagroups(data, error_callback=None, check_crc=True, resync=True):
 
     if isinstance(data, bitarray):
         i = 0
-        while i < data.length():
+        while i < len(data):
             datagroup = Datagroup.frombits(data, i=i, check_crc=check_crc)
             yield datagroup
             i += (datagroup.size * 8)
@@ -248,19 +248,19 @@ def decode_datagroups(data, error_callback=None, check_crc=True, resync=True):
             except: 
                 reading = False
                 logger.exception("error")
-            if not buf.length(): 
+            if not len(buf): 
                 logger.debug('buffer is at zero length')
                 return
             i = 0
-            #logger.debug('chunking buffer of length %d bytes', buf.length()/8)
-            length = buf.length()/8
+            #logger.debug('chunking buffer of length %d bytes', len(buf)/8)
+            length = len(buf)/8
             if length < 9: 
                 continue
             size = int(buf[59:72].to01(), 2)
             if length < size: 
                 #logger.debug('buffer still not at right size for datagroup size of %d bytes', size)
                 continue
-            while i < buf.length():
+            while i < len(buf):
                 try:
                     datagroup = Datagroup.frombits(buf, i=i, check_crc=check_crc)
                     yield datagroup
@@ -287,7 +287,7 @@ def decode_datagroups(data, error_callback=None, check_crc=True, resync=True):
             buf.frombytes(p.data)
             
             if p.last:
-                logger.debug('got packet %s -  buffer now %d bytes', p, buf.length()/8)
+                logger.debug('got packet %s -  buffer now %d bytes', p, len(buf)/8)
                 try:
                     datagroup = Datagroup.frombits(buf, i=i, check_crc=check_crc)
                     logger.debug('yielding datagroup: %s', datagroup)
@@ -375,7 +375,7 @@ class Datagroup:
         """Parse a datagroup from a bitarray, with an optional offset"""
        
         # check we have enough header first
-        if (bits.length() - i) < ((9 + 2) * 8): raise IncompleteDatagroupError
+        if (len(bits) - i) < ((9 + 2) * 8): raise IncompleteDatagroupError
        
         # datagroup header
         type = int(bits[4:8].to01(), 2)
@@ -392,12 +392,12 @@ class Datagroup:
 
         # data segment header
         size = int(bits[59:72].to01(), 2) # get size to check we have a complete datagroup
-        if bits.length() < 72 + size * 8 + 16: raise IncompleteDatagroupError
+        if len(bits) < 72 + size * 8 + 16: raise IncompleteDatagroupError
         data = bits[72 : 72 + (size*8)]
         if check_crc:
-            crc = int(bits[72 + data.length() : 72 + data.length() + 16].to01(), 2)
-            calculated = calculate_crc(bits[:72+data.length()].tobytes())
-            if crc != calculated: raise InvalidCrcError(crc, bits[:72+data.length() + 16].tobytes())  
+            crc = int(bits[72 + len(data) : 72 + len(data) + 16].to01(), 2)
+            calculated = calculate_crc(bits[:72+len(data)].tobytes())
+            if crc != calculated: raise InvalidCrcError(crc, bits[:72+len(data) + 16].tobytes())  
         
         datagroup = Datagroup(transport_id, type, data.tobytes(), segment_index, continuity, True, repetition, last)
         logger.debug('parsed datagroup: %s', datagroup)

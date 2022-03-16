@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+from setuptools import setup
 
 setup(name='dabmsc',
       version='1.0.1',
@@ -11,5 +11,6 @@ setup(name='dabmsc',
       download_url='https://github.com/GlobalRadio/python-dabmsc/tarball/1.0.1',
       packages=['msc', 'msc.datagroups', 'msc.packets'],
       package_dir = {'' : 'src'},
-      keywords = ['dab', 'msc', 'radio']
+      keywords = ['dab', 'msc', 'radio'],
+      install_requires = ['bitarray']
      )

@@ -20,7 +20,7 @@ parser.add_argument('-f', dest='output', help='outfile file directory')
 
 args = parser.parse_args()
 if args.filename: 
-    print 'decoding from', args.filename 
+    print(('decoding from', args.filename))
     f = open(args.filename, 'rb')   
 else:
     f = sys.stdin
@@ -54,17 +54,17 @@ logger.debug("decoding function: %s", f);
 
 for o in f:
     if isinstance(o, Packet):
-        print 'packet:', o
+        print('packet:', o)
     elif isinstance(o, Datagroup):
-        print 'dataroup:', o
+        print('dataroup:', o)
     elif isinstance(o, MotObject):
-        print "=" * 48
-        print '{name} {type} ({size} bytes)'.format(name=o.get_name(), type=o.get_type(), size=len(o.get_body()))
-        print "=" * 48
-        print 'parameters:'
+        print("=" * 48)
+        print('{name} {type} ({size} bytes)'.format(name=o.get_name(), type=o.get_type(), size=len(o.get_body())))
+        print("=" * 48)
+        print('parameters:')
         for p in o.get_parameters():
-            print '\t', repr(p)
-        print 
+            print('\t', repr(p))
+        print() 
         if args.output:
             import base64
             file_output = open(os.path.join(args.output, base64.urlsafe_b64encode(o.get_name())), 'wb')
