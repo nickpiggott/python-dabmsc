@@ -1,5 +1,5 @@
 import unittest
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 
 from msc import calculate_crc
 from mot import MotObject, ContentType
@@ -15,8 +15,8 @@ class UdpTransportTest(unittest.TestCase):
         
     def test_encode(self):
         
-        req = urllib2.Request(url)
-        response = urllib2.urlopen(req)
+        req = urllib.request.Request(url)
+        response = urllib.request.urlopen(req)
         data = response.read()
         type = ContentType.IMAGE_JFIF
                 
@@ -29,7 +29,7 @@ class UdpTransportTest(unittest.TestCase):
         # define callback
         i = iter(datagroups)
         def callback():
-            return i.next()
+            return next(i)
 
         transport = UdpTransport(address=('10.15.81.160', 5555))
         transport.start(callback)       
@@ -43,8 +43,8 @@ class FileTransportTest(unittest.TestCase):
 
     def test_encode_slide_to_file(self):
         url = 'http://owdo.thisisglobal.com/2.0/id/25/logo/320x240.jpg'
-        req = urllib2.Request(url)
-        response = urllib2.urlopen(req)
+        req = urllib.request.Request(url)
+        response = urllib.request.urlopen(req)
         data = response.read()
         type = ContentType.IMAGE_JFIF
                 
@@ -57,10 +57,10 @@ class FileTransportTest(unittest.TestCase):
         # define callback
         i = iter(datagroups)
         def callback():
-            return i.next()
+            return next(i)
 
-        import StringIO
-        s = StringIO.StringIO()
+        import io
+        s = io.StringIO()
         transport = FileTransport(s)
         transport.start(callback)       
 
