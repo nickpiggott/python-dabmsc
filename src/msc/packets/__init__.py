@@ -1,5 +1,6 @@
 from bitarray import bitarray
-from msc import bitarray_to_hex, int_to_bitarray, calculate_crc, InvalidCrcError
+from bitarray.util import int2ba
+from msc import calculate_crc, InvalidCrcError
 import logging
 
 logger = logging.getLogger('dabdata.packets')
@@ -28,13 +29,13 @@ class Packet:
         bits = bitarray()
         
         # build header
-        bits += int_to_bitarray((self.size / 24) - 1, 2) # (0-1): packet length
-        bits += int_to_bitarray(self.index, 2) # (2-3): continuity index
+        bits += int2ba(int((self.size / 24) - 1), 2) # (0-1): packet length
+        bits += int2ba(self.index, 2) # (2-3): continuity index
         bits += bitarray('1' if self.first else '0') # (4): first packet of datagroup series
         bits += bitarray('1' if self.last else '0') # (5): last packet of datagroup series
-        bits += int_to_bitarray(self.address, 10) # (6-15): packet address
+        bits += int2ba(self.address, 10) # (6-15): packet address
         bits += bitarray('0') # (16): Command flag = 0 (data)
-        bits += int_to_bitarray(len(self.data), 7) # (17-23): useful data length
+        bits += int2ba(len(self.data), 7) # (17-23): useful data length
 
         # add the packet data
         tmp = bitarray()
@@ -45,7 +46,7 @@ class Packet:
         bits += bitarray('0'*(self.size - len(self.data) - 5)*8)
         
         # add CRC
-        bits += int_to_bitarray(calculate_crc(bits.tobytes()), 16)
+        bits += int2ba(calculate_crc(bits.tobytes()), 16)
         
         return bits.tobytes()
 

@@ -9,7 +9,7 @@ class Test(unittest.TestCase):
 
         http://reveng.sourceforge.net/crc-catalogue/16.htm
         """
-        assert(calculate_crc("123456789") == 0x906e)
+        assert(calculate_crc(b'123456789') == 0xD64E)
 
 if __name__ == "__main__":
     unittest.main()

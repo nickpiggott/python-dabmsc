@@ -1,41 +1,41 @@
-import crcmod
+import crcmod.predefined
 from bitarray import bitarray
 import logging
 
 logger = logging.getLogger('msc')
 
-crcfun = crcmod.mkCrcFun(0x11021, 0x0, False, 0xFFFF)
+crcfun = crcmod.predefined.mkCrcFun('crc-16-genibus') # I remember this being problematic and that I had it defined with a checksum of 0x906e before, which makes the algorithm 'x-25'. However, the previous implementation gave a variant `crc-16-genibus`
 def calculate_crc(data):
     return crcfun(data)
 
-def hex_to_bitarray(hex):
-    b = bitarray()
-    for byte in hex.split(' '):
-        b.extend(int_to_bitarray(int('0x%s' % byte, 16), 8))
-    return b
+# def hex_to_bitarray(hex):
+#     b = bitarray()
+#     for byte in hex.split(' '):
+#         b.extend(int_to_bitarray(int('0x%s' % byte, 16), 8))
+#     return b
 
-def int_to_bitarray(i, n):
-    return bitarray(('{0:0%db}' % n).format(int(i)))
+# def int_to_bitarray(i, n):
+#     return bitarray(('{0:0%db}' % n).format(int(i)))
 
-def bitarray_to_int(bits):
-    return int(bits.to01(), 2)
+# def bitarray_to_int(bits):
+#     return int(bits.to01(), 2)
 
-def bitarray_to_hex(bits, width=32):
-    if not isinstance(bits, bitarray): raise ValueError('object is not a bitarray')
-    rows = []
-    for i in range(0, len(bits), width*8):
-        rows.append(' '.join(["%02X" % ord(x) for x in bits[i:i+(width*8)].tobytes()]).strip())
-    return '\r\n'.join(rows)
+# def bitarray_to_hex(bits, width=32):
+#     if not isinstance(bits, bitarray): raise ValueError('object is not a bitarray')
+#     rows = []
+#     for i in range(0, len(bits), width*8):
+#         rows.append(' '.join(["%02X" % ord(x) for x in bits[i:i+(width*8)].tobytes()]).strip())
+#     return '\r\n'.join(rows)
 
-def bitarray_to_binary(bits, width=32):
-    if not isinstance(bits, bitarray): raise ValueError('object is not a bitarray')
-    rows = []
-    for i in range(0, len(bits), width*8):
-        bytes = []
-        for j in range(i, i+(width*8), 8):
-            bytes.append(bits[j:j+8].to01())
-        rows.append(' '.join(bytes))
-    return '\r\n'.join(rows)
+# def bitarray_to_binary(bits, width=32):
+#     if not isinstance(bits, bitarray): raise ValueError('object is not a bitarray')
+#     rows = []
+#     for i in range(0, len(bits), width*8):
+#         bytes = []
+#         for j in range(i, i+(width*8), 8):
+#             bytes.append(bits[j:j+8].to01())
+#         rows.append(' '.join(bytes))
+#     return '\r\n'.join(rows)
 
 class InvalidCrcError(Exception): 
     

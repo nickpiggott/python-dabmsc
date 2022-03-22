@@ -3,12 +3,11 @@ from mot import MotObject, ContentType
 from msc.datagroups import *
 from msc.packets import *
 from bitarray import bitarray
-from msc import bitarray_to_hex
 
 class Test(unittest.TestCase):
 
     def test_blank_headermode(self):
-        data = "\x00" * 128
+        data = ("\x00" * 128).encode()
         
         # create MOT object
         object = MotObject("TestObject", data, ContentType.IMAGE_JFIF)
