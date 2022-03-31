@@ -210,9 +210,6 @@ def encode_directorymode(objects, directory_parameters=None, segmenting_strategy
     segments = _segment(bits.tobytes(), segmenting_strategy)
     for i, segment in enumerate(segments):
         header_group = Datagroup(directory_transport_id, DatagroupType.DIRECTORY_UNCOMPRESSED, segment, i, i%16, last=True if i == len(segments) - 1 else False)
-        tmp = bitarray()
-        tmp.frombytes(header_group.tobytes())
-        tmp.frombytes(header_group.tobytes())
         datagroups.append(header_group)
         
     # add body datagroups
@@ -242,28 +239,25 @@ def decode_datagroups(data : bytes, error_callback=None, check_crc=True, resync=
 
     if isinstance(data, bytes):
         logger.debug("decoding datagroups from a byte array of length %d" % len(data))
-        i = 0
-        while i < len(data):
-            logger.debug("decoding datagroup from byte position %d", i)
-            datagroup = Datagroup.frombytes(data, i=i, check_crc=check_crc)
+        while len(data):
+            datagroup = Datagroup.frombytes(data, check_crc=check_crc)
+            datagroup_length = datagroup.get_size()
             yield datagroup
-            datagroup_length = len(datagroup.tobytes())
-            logger.debug("moving forward %d bytes" % datagroup_length)
-            i += datagroup_length
+            logger.debug("moving forward %d bytes", datagroup_length)
+            data = data[datagroup_length:]
     elif isinstance(data, IOBase):
-        logger.debug('decoding datagroups from file: %s', data)
-        buf = bytes()
+        logger.debug('decoding datagroups from IO: %s', data)
         reading = True
+        buf = bytes()
         while reading:
             try:
-                buf = data.read(8)
+                buf += data.read()
             except: 
                 reading = False
-                logger.exception("error")
+                logger.exception("error whilst reading from IO")
             if not len(buf): 
-                logger.debug('buffer is at zero length')
+                logger.debug("IO buffer is now at zero length - breaking")
                 return
-            i = 0
             logger.debug('chunking buffer of length %d bytes', len(buf))
             length = len(buf)
             if length < 9: 
@@ -274,12 +268,11 @@ def decode_datagroups(data : bytes, error_callback=None, check_crc=True, resync=
             if length < size: 
                 logger.debug('buffer still not at right size for datagroup size of %d bytes', size)
                 continue
-            while i < len(buf):
+            while len(buf):
                 try:
-                    datagroup = Datagroup.frombytes(buf, i=i, check_crc=check_crc)
+                    datagroup = Datagroup.frombytes(buf, check_crc=check_crc)
                     yield datagroup
-                    i = datagroup.size
-                    buf = buf[i:]
+                    buf = buf[datagroup.get_size():]
                 except IncompleteDatagroupError: 
                     logger.warning('encountered an incomplete datagroup')
                     break
@@ -307,9 +300,9 @@ def decode_datagroups(data : bytes, error_callback=None, check_crc=True, resync=
                     datagroup = Datagroup.frombits(buf, i=i, check_crc=check_crc)
                     logger.debug('yielding datagroup: %s', datagroup)
                     yield datagroup                    
-                except (IncompleteDatagroupError, ide): 
+                except IncompleteDatagroupError as ide: 
                     if error_callback: error_callback(ide) 
-                except (InvalidCrcError, ice):
+                except InvalidCrcError as ice:
                     if error_callback: error_callback(ice) 
                 del buf
                 buf = bitarray()
@@ -365,6 +358,9 @@ class Datagroup:
     def get_last(self) -> bool:
         return self.__last
     
+    def get_size(self) -> int:
+        return 7 + len(self.__data) + 2
+
     def tobytes(self) -> bytes:
         """
         Encode the datagroup into a byte array
@@ -394,25 +390,24 @@ class Datagroup:
         bits += int2ba(self.__transport_id, 16) # (41-56) transport ID
 
         # data field
-        tmp = bitarray()
-        tmp.frombytes(self.__data)
-        bits += tmp
-        
-        # CRC
-        crc = calculate_crc(bits.tobytes())
-        bits += int2ba(crc, 16)
-
         data = bits.tobytes()
+        data += self.__data
+        
+        # validate CRC
+        # 5.3.3.4 The data group CRC shall be a 16-bit CRC word calculated on the data group header, the session header and the data group data field.
+        crc = calculate_crc(data)
+        logger.debug('calculated CRC of %d on %d bytes: %s', crc, len(data), data.hex())
+        data += int.to_bytes(crc, 2, 'big')
+
         logging.debug("encoded datagroup %s to %d bytes" % (self, len(data)))
 
         return data
      
     @staticmethod
-    def frombytes(data : bytes, i : int=0, check_crc : bool=True):
-        """Parse a datagroup from a byte array, with an optional offset"""
-        if(i >= len(data)): 
-            raise ValueError("the offset is larger than the length of the data")
-        data = data[i:]
+    def frombytes(data : bytes, check_crc : bool=True):
+        """
+        Parse a datagroup from a byte array, with an optional offset
+        """
 
         # check we have enough header first
         if (len(data) < (7 + 2)): 
@@ -456,10 +451,13 @@ class Datagroup:
             raise IncompleteDatagroupError("the number of bytes is less than is required for the entire datagroup")
         logger.debug("reading a datagroup segment payload of %d bytes with a 2 byte header" % size)
         payload = data[7 : 7 + 2 + size]
-        crc = int.from_bytes(data[7 + len(payload) : 7 + len(payload) + 2], byteorder='big', signed=False)
-        calculated = calculate_crc(payload)
-        if crc != calculated: 
-            raise InvalidCrcError(crc, payload.hex())
+        signalled = int.from_bytes(data[7 + len(payload) : 7 + len(payload) + 2], byteorder='big', signed=False)
+
+        # check the CRC against a calculated one
+        calculated = calculate_crc(data[:7+2+size])
+        if signalled != calculated: 
+            raise InvalidCrcError(calculated, signalled)
+        logger.debug('the signalled CRC %d matches the calculated CRC', signalled)
         
         datagroup = Datagroup(transport_id, type, payload, segment_index=segment_index, continuity=continuity, repetition=repetition, last=last)
         logger.debug('parsed datagroup: %s', datagroup)

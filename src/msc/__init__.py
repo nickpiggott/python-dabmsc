@@ -5,43 +5,18 @@ import logging
 logger = logging.getLogger('msc')
 
 crcfun = crcmod.predefined.mkCrcFun('crc-16-genibus') # I remember this being problematic and that I had it defined with a checksum of 0x906e before, which makes the algorithm 'x-25'. However, the previous implementation gave a variant `crc-16-genibus`
-def calculate_crc(data):
+def calculate_crc(data) -> int:
+    logger.debug('calculating CRC from %d bytes: %s', len(data), data.hex())
     return crcfun(data)
-
-# def hex_to_bitarray(hex):
-#     b = bitarray()
-#     for byte in hex.split(' '):
-#         b.extend(int_to_bitarray(int('0x%s' % byte, 16), 8))
-#     return b
-
-# def int_to_bitarray(i, n):
-#     return bitarray(('{0:0%db}' % n).format(int(i)))
-
-# def bitarray_to_int(bits):
-#     return int(bits.to01(), 2)
-
-# def bitarray_to_hex(bits, width=32):
-#     if not isinstance(bits, bitarray): raise ValueError('object is not a bitarray')
-#     rows = []
-#     for i in range(0, len(bits), width*8):
-#         rows.append(' '.join(["%02X" % ord(x) for x in bits[i:i+(width*8)].tobytes()]).strip())
-#     return '\r\n'.join(rows)
-
-# def bitarray_to_binary(bits, width=32):
-#     if not isinstance(bits, bitarray): raise ValueError('object is not a bitarray')
-#     rows = []
-#     for i in range(0, len(bits), width*8):
-#         bytes = []
-#         for j in range(i, i+(width*8), 8):
-#             bytes.append(bits[j:j+8].to01())
-#         rows.append(' '.join(bytes))
-#     return '\r\n'.join(rows)
 
 class InvalidCrcError(Exception): 
     
-    def __init__(self, crc, data):
-        self.crc = crc
-        self.data = data
+    def __init__(self, calculated : int, signalled : int):
+        self.calculated = calculated
+        self.signalled = signalled
+
+    def __str__(self) -> str:
+        return "calculated CRC %x is different from signalled %x" % (self.calculated, self.signalled)
 
 class TransportIdGenerator():
     '''interface for classes to generate transport IDs'''
@@ -60,7 +35,7 @@ class MemoryCachedTransportIdGenerator(TransportIdGenerator):
         self.cache = {}
 
     def next(self, name=None):
-        # first check the cache
+        # first check tbhe cache
         if name is not None and name in self.cache:
             return self.cache.get(name)
 

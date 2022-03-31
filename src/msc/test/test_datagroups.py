@@ -29,7 +29,6 @@ class Test(unittest.TestCase):
         assert len(datagroup_1.get_data()) == 22
         assert len(datagroup_1.tobytes()) == 31
         assert datagroup_1.get_type() == DatagroupType.HEADER
-        print(datagroup_1.tobytes().hex())
         assert datagroup_1.tobytes().hex() == '730080001230390014000001000a0401cc0b40546573744f626a6563749d93'  
 
         assert len(datagroup_2.tobytes()) == 27
@@ -37,12 +36,14 @@ class Test(unittest.TestCase):
         assert datagroup_2.tobytes().hex() == '740080001230390010000000000000000000000000000000002730'
 
     def test_roundtrip_1(self):
-
-        hex = '730080001230390014000001000a0401cc0b40546573744f626a6563749d93'
-        data = bytes.fromhex(hex)
+        hex_1 = '730080001230390014000001000a0401cc0b40546573744f626a6563749d93'
+        hex_2 = '740080001230390010000000000000000000000000000000002730'
+        data = bytes.fromhex(hex_1 + hex_2)
         datagroups = list(decode_datagroups(data))
         datagroup_1 = datagroups[0]
-        assert datagroup_1.tobytes() == hex2ba(hex)
+        datagroup_2 = datagroups[1]
+        assert datagroup_1.tobytes().hex() == hex_1
+        assert datagroup_2.tobytes().hex() == hex_2
             
     def test_encode_short_directorymode(self):
         """testing directory mode with blank images"""
@@ -53,7 +54,7 @@ class Test(unittest.TestCase):
             object = MotObject("TestObject%d" % i, ("\x00" * 16).encode(), contenttype = ContentType.IMAGE_JFIF, transport_id = 12345)
             objects.append(object)
             
-        # encode directory
+        # encode directory 
         datagroups = encode_directorymode(objects)
         assert len(datagroups) == 4
 
@@ -65,9 +66,9 @@ class Test(unittest.TestCase):
 
     def test_decode_short_headermode(self):
 
-        from bitarray.util import hex2ba
-        data = hex2ba('730080001230390014000001000a0401cc0b40546573744f626a6563749d93740080001230390010000000000000000000000000000000002730')
-        datagroups = list(decode_datagroups(data))
+        header_bytes = bytes.fromhex('730080001230390014000001000a0401cc0b40546573744f626a6563749d93')
+        body_bytes = bytes.fromhex('740080001230390010000000000000000000000000000000002730')
+        datagroups = list(decode_datagroups(header_bytes + body_bytes))
         datagroup_1 = datagroups[0]
         datagroup_2 = datagroups[1]
         
@@ -77,12 +78,32 @@ class Test(unittest.TestCase):
         assert datagroup_1.get_continuity() == 0
         assert datagroup_1.get_last() == True
 
-        print(datagroup_1)
-        print(datagroup_2)
+        assert datagroup_2.get_type() == DatagroupType.BODY
+        assert datagroup_2.get_transport_id() == 12345
+        assert datagroup_2.get_segment_index() == 0
+        assert datagroup_2.get_continuity() == 0
+        assert datagroup_2.get_last() == True
 
+    def test_decode_from_file(self):
+
+        """
+        Test decoding of datagroups from a file-like object
+        """
+
+        header_bytes = bytes.fromhex('730080001230390014000001000a0401cc0b40546573744f626a6563749d93')
+        body_bytes = bytes.fromhex('740080001230390010000000000000000000000000000000002730')
+
+        import io
+        f = io.BytesIO(header_bytes + body_bytes)
+        datagroups = list(decode_datagroups(f))
+
+        assert datagroups[0].tobytes() == header_bytes
+        assert datagroups[1].tobytes() == body_bytes
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
+    #unittest.main()
     test = Test()
-    test.test_encode_short_headermode()
+    test.test_decode_from_file()
+
