@@ -102,8 +102,5 @@ class Test(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    #unittest.main()
-    test = Test()
-    test.test_decode_from_file()
+    unittest.main()
 

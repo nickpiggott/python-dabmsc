@@ -4,7 +4,7 @@ import logging
 
 logger = logging.getLogger('msc')
 
-crcfun = crcmod.predefined.mkCrcFun('crc-16-genibus') # I remember this being problematic and that I had it defined with a checksum of 0x906e before, which makes the algorithm 'x-25'. However, the previous implementation gave a variant `crc-16-genibus`
+crcfun = crcmod.mkCrcFun(0x11021, 0x0, False, 0xFFFF)
 def calculate_crc(data) -> int:
     logger.debug('calculating CRC from %d bytes: %s', len(data), data.hex())
     return crcfun(data)

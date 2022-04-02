@@ -129,18 +129,20 @@ def encode_headermode(objects, segmenting_strategy=None):
         body_segments = _segment(body_data, segmenting_strategy)
     
         # encode header extension parameters
-        extension_bits = bitarray()
+        extension_bytes = bytes()
         for parameter in object.get_parameters():
-            extension_bits += parameter.encode()
+            extension_bytes += parameter.tobytes()
         
-        # insert the core parameters into the header    
+        # insert the core parameters into the header  
+        data = bytes()  
         bits = bitarray()
         bits += int2ba(len(body_data) if body_data else 0, 28) # (0-27): BodySize in bytes
-        bits += int2ba(int(len(extension_bits) / 8 + 7), 13) # (28-40): HeaderSize in bytes (core=7 + extension)
+        bits += int2ba(int(len(extension_bytes) + 7), 13) # (28-40): HeaderSize in bytes (core=7 + extension)
         bits += int2ba(object.get_contenttype().type, 6)  # (41-46): ContentType 
         bits += int2ba(object.get_contenttype().subtype, 9) # (47-55): ContentSubType
-        bits += extension_bits # (56-n): Header extension data
-        header_segments = _segment(bits.tobytes(), segmenting_strategy)
+        data = bits.tobytes()
+        data += extension_bytes # (56-n): Header extension data
+        header_segments = _segment(data, segmenting_strategy)
 
         # add header datagroups
         for i, segment in enumerate(header_segments):
@@ -165,49 +167,56 @@ def encode_directorymode(objects, directory_parameters=None, segmenting_strategy
     if not segmenting_strategy: segmenting_strategy=ConstantSegmentSize()
 
     # build the directory entries
-    entries = bitarray()
+    header_bytes = bytes()
     for object in objects:              
         # encode header extension parameters
-        extension_bits = bitarray()
+        extension = bytes()
         for parameter in object.get_parameters():
-            extension_bits += parameter.encode()
+            extension += parameter.tobytes()
         
+        header = bitarray() 
+
         # transport ID in first 2 bytes
-        entries += int2ba(object.get_transport_id(), 16)
+        header += int2ba(object.get_transport_id(), 16)
         
-        # add the core parameters into the header    
-        entries += int2ba(len(object.get_body()), 28) # (0-27): BodySize in bytes
-        entries += int2ba(int(len(extension_bits) / 8 + 7), 13) # (28-40): HeaderSize in bytes (core=7 + extension)
-        entries += int2ba(object.get_contenttype().type, 6)  # (41-46): ContentType 
-        entries += int2ba(object.get_contenttype().subtype, 9) # (47-55): ContentSubType
-        entries += extension_bits # (56-n): Header extension data
+        # add the core parameters into the header   
+        header += int2ba(len(object.get_body()), 28) # (0-27): BodySize in bytes
+        header += int2ba(int(len(extension) + 7), 13) # (28-40): HeaderSize in bytes (core=7 + extension)
+        header += int2ba(object.get_contenttype().type, 6)  # (41-46): ContentType 
+        header += int2ba(object.get_contenttype().subtype, 9) # (47-55): ContentSubType
+        header_bytes += header.tobytes()
+        header_bytes += extension # (56-n): Header extension data
 
     # build directory parameters
     directory_params = bitarray()
     if directory_parameters is not None:
         for parameter in directory_parameters:
-            directory_params += parameter.encode()
+            directory_params += parameter.tobytes()
     
     # build directory header
     bits = bitarray()
     bits += bitarray('0') # (0): CompressionFlag: This bit shall be set to 0
     bits += bitarray('0') # (1): RFU
-    bits += int2ba(len(entries.tobytes()) + 13 + len(directory_params.tobytes()), 30) # (2-31): DirectorySize: total size of the MOT directory in bytes, including the 13 header bytes and length of the directory parameter bytes
+    bits += int2ba(len(header_bytes) + 13 + len(directory_params), 30) # (2-31): DirectorySize: total size of the MOT directory in bytes, including the 13 header bytes and length of the directory parameter bytes
     bits += int2ba(len(objects), 16) # (32-47): NumberOfObjects: Total number of objects described by the directory
     bits += int2ba(0, 24) # (48-71): DataCarouselPeriod: Max time in tenths of seconds for the data carousel to complete a cycle. Value of zero for undefined
     bits += bitarray('000') # (72-74): RFU
     bits += int2ba(0, 13) # (75-87): SegmentSize: Size in bytes that will be used for the segmentation of objects within the MOT carousel. Value of zero indicates that objects can have different segmentation sizes. The last segment of an obect may be smaller than this size.
     bits += int2ba(len(directory_params.tobytes()), 16) # (88-103): DirectoryExtensionLength: Length of following directory extension bytes
     
+    # byte final data
+    data = bytes()
+    data += bits.tobytes()
+
     # add directory parameters
-    bits += directory_params
+    data += directory_params
     
     # add directory entries
-    bits += entries 
+    data += header_bytes 
     
     # segment and add directory datagroups with a new transport ID
     directory_transport_id = generate_transport_id()
-    segments = _segment(bits.tobytes(), segmenting_strategy)
+    segments = _segment(data, segmenting_strategy)
     for i, segment in enumerate(segments):
         header_group = Datagroup(directory_transport_id, DatagroupType.DIRECTORY_UNCOMPRESSED, segment, i, i%16, last=True if i == len(segments) - 1 else False)
         datagroups.append(header_group)
