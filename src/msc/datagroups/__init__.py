@@ -329,7 +329,7 @@ class PaddingDatagroup:
 
 class Datagroup:
         
-    def __init__(self, transport_id : int, type : DatagroupType, data : bytes, segment_index : int, continuity : bool, repetition : int=0, last : bool=False):
+    def __init__(self, transport_id : int, type : DatagroupType, data : bytes, segment_index : int, continuity : int, repetition : int=0, last : bool=False):
         if transport_id > 65535 : raise ValueError('transport id must be no greater than 65535')
         self.__transport_id = transport_id
         self.__type = type
