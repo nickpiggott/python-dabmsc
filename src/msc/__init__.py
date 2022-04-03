@@ -1,10 +1,11 @@
-import crcmod.predefined
+import crcmod
 from bitarray import bitarray
 import logging
 
 logger = logging.getLogger('msc')
 
 crcfun = crcmod.mkCrcFun(0x11021, 0x0, False, 0xFFFF)
+
 def calculate_crc(data) -> int:
     logger.debug('calculating CRC from %d bytes: %s', len(data), data.hex())
     return crcfun(data)
@@ -35,7 +36,7 @@ class MemoryCachedTransportIdGenerator(TransportIdGenerator):
         self.cache = {}
 
     def next(self, name=None):
-        # first check tbhe cache
+        # first check the cache
         if name is not None and name in self.cache:
             return self.cache.get(name)
 
