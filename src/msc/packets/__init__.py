@@ -104,20 +104,25 @@ def encode_packets(datagroups, address=None, size=None, continuity=None, padding
         return index
     
     # encode the datagroups into a continuous datastream
-    for datagroup in datagroups:
-        data = datagroup.tobytes()
-        chunk_size = size - 5
-        for i in range(0, len(data), chunk_size):
-            chunk = data[i:i+chunk_size if i+chunk_size < len(data) else len(data)]
-            continuity_index = get_continuity_index(address)
-            packet = Packet(size, address, chunk, True if i == 0 else False, True if i+chunk_size >= len(data) else False, continuity_index)
-            packets.append(packet)
-        # add padding packets to make sure the Continuity Index ends with 3
-        if padding and continuity_index != 3:
-            while continuity_index !=3:
-                continuity_index += 1
-                packet = Packet(size, address, [], True, True, continuity_index)
+    # repeating sufficient times to make sure the final continuity index is 3
+    # this could make the output filesize x2 or x4 the minimum size
+    while True:
+        for datagroup in datagroups:
+            data = datagroup.tobytes()
+            chunk_size = size - 5
+            for i in range(0, len(data), chunk_size):
+                chunk = data[i:i+chunk_size if i+chunk_size < len(data) else len(data)]
+                continuity_index = get_continuity_index(address)
+                packet = Packet(size, address, chunk, True if i == 0 else False, True if i+chunk_size >= len(data) else False, continuity_index)
                 packets.append(packet)
+        if padding == False or (padding == True and continuity_index == 3):
+            break
+        # add padding packets to make sure the Continuity Index ends with 3
+        # if padding and continuity_index != 3:
+        #    while continuity_index !=3:
+        #        continuity_index += 1
+        #        packet = Packet(size, address, [], True, True, continuity_index)
+        #        packets.append(packet)
         
     return packets
 
