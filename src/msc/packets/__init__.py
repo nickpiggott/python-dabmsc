@@ -38,8 +38,9 @@ class Packet:
 
         # add the packet data
         tmp = bitarray()
-        tmp.frombytes(self.data)
-        bits += tmp # (24-n): packet data
+        if len(self.data) > 0:
+            tmp.frombytes(self.data)
+            bits += tmp # (24-n): packet data
                     
         # add packet padding if needed
         bits += bitarray('0'*(self.size - len(self.data) - 5)*8)
@@ -77,7 +78,7 @@ class Packet:
     def __repr__(self):
         return '<Packet: %s>' % str(self)
 
-def encode_packets(datagroups, address=None, size=None, continuity=None):
+def encode_packets(datagroups, address=None, size=None, continuity=None, padding=False):
 
     """
     Encode a set of datagroups into packets
@@ -86,6 +87,7 @@ def encode_packets(datagroups, address=None, size=None, continuity=None):
     if not address: address = 1
     if not size: size = Packet.SIZE_96
     if not continuity: continuity = {}
+    if not padding: padding = False
 
     if address < 1 or address > 1024: raise ValueError('packet address must be greater than zero and less than 1024')
     if size not in Packet.sizes: raise ValueError('packet size %d must be one of: %s' % (size, Packet.sizes))
@@ -102,13 +104,25 @@ def encode_packets(datagroups, address=None, size=None, continuity=None):
         return index
     
     # encode the datagroups into a continuous datastream
-    for datagroup in datagroups:
-        data = datagroup.tobytes()
-        chunk_size = size - 5
-        for i in range(0, len(data), chunk_size):
-            chunk = data[i:i+chunk_size if i+chunk_size < len(data) else len(data)]
-            packet = Packet(size, address, chunk, True if i == 0 else False, True if i+chunk_size >= len(data) else False, get_continuity_index(address))
-            packets.append(packet)
+    # repeating sufficient times to make sure the final continuity index is 3
+    # this could make the output filesize x2 or x4 the minimum size
+    while True:
+        for datagroup in datagroups:
+            data = datagroup.tobytes()
+            chunk_size = size - 5
+            for i in range(0, len(data), chunk_size):
+                chunk = data[i:i+chunk_size if i+chunk_size < len(data) else len(data)]
+                continuity_index = get_continuity_index(address)
+                packet = Packet(size, address, chunk, True if i == 0 else False, True if i+chunk_size >= len(data) else False, continuity_index)
+                packets.append(packet)
+        if padding == False or (padding == True and continuity_index == 3):
+            break
+        # add padding packets to make sure the Continuity Index ends with 3
+        # if padding and continuity_index != 3:
+        #    while continuity_index !=3:
+        #        continuity_index += 1
+        #        packet = Packet(size, address, [], True, True, continuity_index)
+        #        packets.append(packet)
         
     return packets
 
