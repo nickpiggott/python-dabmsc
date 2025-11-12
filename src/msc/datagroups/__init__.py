@@ -197,21 +197,40 @@ def encode_directorymode(objects, directory_parameters=None, segmenting_strategy
     bits += entries 
     
     # segment and add directory datagroups with a new transport ID
+    continuity_directory = 0
     directory_transport_id = generate_transport_id()
     segments = _segment(bits.tobytes(), segmenting_strategy)
     for i, segment in enumerate(segments):
-        header_group = Datagroup(directory_transport_id, DIRECTORY_UNCOMPRESSED, segment, i, i%16, last=True if i == len(segments) - 1 else False)
+        header_group = Datagroup(directory_transport_id, DIRECTORY_UNCOMPRESSED, segment, i, continuity_directory, last=True if i == len(segments) - 1 else False)
         tmp = bitarray()
         tmp.frombytes(header_group.tobytes())
         tmp.frombytes(header_group.tobytes())
         datagroups.append(header_group)
+        continuity_directory = (continuity_directory + 1) % 16
         
     # add body datagroups
+    continuity_body = 0
     for object in objects:
         segments = _segment(object.get_body(), segmenting_strategy)
         for i, segment in enumerate(segments):
-            body_group = Datagroup(object.get_transport_id(), BODY, segment, i, i%16, last=True if i == len(segments) - 1 else False)
+            body_group = Datagroup(object.get_transport_id(), BODY, segment, i, continuity_body, last=True if i == len(segments) - 1 else False)
             datagroups.append(body_group)
+            continuity_body = (continuity_body + 1) % 16
+    # add empty body datagroups to assure continuity
+    if continuity_body != 0:
+        # segment header
+        bits = bitarray()
+        bits += int_to_bitarray(0, 3) # (0-2): Repetition Count remaining (0 = only broadcast)
+        bits += int_to_bitarray(0, 13) # (3-16): SegmentSize
+        dummysegment = bits.tobytes()
+        body_group = Datagroup(generate_transport_id(), BODY, dummysegment, 0, continuity_body, last=True)
+        datagroups.append(body_group)
+        continuity_body = (continuity_body + 1) % 16
+        if continuity_body != 0:
+            continuity_body = 15
+            body_group = Datagroup(generate_transport_id(), BODY, dummysegment, 0, continuity_body, last=True)
+            datagroups.append(body_group)
+
     return datagroups
 
 import select
