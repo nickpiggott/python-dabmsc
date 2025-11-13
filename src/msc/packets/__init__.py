@@ -84,6 +84,27 @@ def encode_packets(datagroups, address=None, size=None, continuity=None, padding
     Encode a set of datagroups into packets
     """
 
+    def get_continuity_index(address):
+        index=0
+        if address in continuity:
+            index = continuity[address]
+            index += 1
+            if index > 3: index = 0
+        continuity[address] = index
+        return index
+
+    def get_required_size(payload_size, max_packet_size):
+        if payload_size > (max_packet_size-5):
+          return max_packet_size
+        if payload_size > (72-5):
+          return Packet.SIZE_96
+        elif payload_size > (48-5):
+          return Packet.SIZE_72
+        elif payload_size > (24-5):
+          return Packet.SIZE_48
+        else:
+          return Packet.SIZE_24 
+          
     if not address: address = 1
     if not size: size = Packet.SIZE_96
     if not continuity: continuity = {}
@@ -93,15 +114,6 @@ def encode_packets(datagroups, address=None, size=None, continuity=None, padding
     if size not in Packet.sizes: raise ValueError('packet size %d must be one of: %s' % (size, Packet.sizes))
     
     packets = []
-    
-    def get_continuity_index(address):
-        index=0
-        if address in continuity:
-            index = continuity[address]
-            index += 1
-            if index > 3: index = 0
-        continuity[address] = index
-        return index
     
     # encode the datagroups into a continuous datastream
     # repeating sufficient times to make sure the final continuity index is 3
@@ -113,7 +125,7 @@ def encode_packets(datagroups, address=None, size=None, continuity=None, padding
             for i in range(0, len(data), chunk_size):
                 chunk = data[i:i+chunk_size if i+chunk_size < len(data) else len(data)]
                 continuity_index = get_continuity_index(address)
-                packet = Packet(size, address, chunk, True if i == 0 else False, True if i+chunk_size >= len(data) else False, continuity_index)
+                packet = Packet(get_required_size(len(chunk),size), address, chunk, True if i == 0 else False, True if i+chunk_size >= len(data) else False, continuity_index)
                 packets.append(packet)
         if padding == False or (padding == True and continuity_index == 3):
             break
